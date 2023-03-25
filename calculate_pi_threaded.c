@@ -1,8 +1,11 @@
-// gcc -o p calculate_pi.c -lm 
+// gcc -o p calculate_pi_threaded.c -lm -fopenmp
 #include <stdio.h>
 #include <math.h>
+#include <omp.h>
 
 void main(){
+    omp_set_num_threads(omp_get_num_procs()); // Request as many threads as processors
+    
     double sum=0.;
     int k=0;
 
