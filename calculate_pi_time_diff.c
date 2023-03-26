@@ -7,7 +7,7 @@
 void main(){
     
     double sum1=0., sum2=0;
-    int k=0, NTERMS=100;
+    int k=0, NTERMS=1E8;
     clock_t begin, end;
 
     // SERIAL WAY
