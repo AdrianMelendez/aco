@@ -50,7 +50,7 @@ void main(){
 
     double *c_real, *c_img;
     int *not_diverged;
-    int NMAXITERATIONS=100, NPOINTS_PER_DIMENSION=100;
+    int NMAXITERATIONS=100, NPOINTS_PER_DIMENSION=1000;
 
     double c_real_min=-2., c_real_max=0.5;
     double c_img_min=-1.1, c_img_max=1.1;
