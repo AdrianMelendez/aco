@@ -40,12 +40,16 @@ void output_file(double c_real[], double c_img[], int not_diverged[], int NPOINT
     FILE *out_file = fopen("mandelbrot_parallel.dat", "w");
     fprintf(out_file, "c_real,c_img,divergence\n");
 
+    double start_output = omp_get_wtime();
     #pragma omp for
     for (int i=0; i<NPOINTS_PER_DIMENSION; i++){
         for (int j=0; j<NPOINTS_PER_DIMENSION; j++){
             fprintf(out_file, "%.6f,%.6f,%d\n",c_real[i],c_img[j],not_diverged[j+i*NPOINTS_PER_DIMENSION]);
         }
     }
+    double time_output = (omp_get_wtime() - start_output); //s
+    printf("Time output =%E s \n",time_output);
+
 }
 
 void main(){
@@ -66,7 +70,7 @@ void main(){
     not_diverged = calloc(NPOINTS_PER_DIMENSION*NPOINTS_PER_DIMENSION, sizeof(int));
 
     double start = omp_get_wtime();
-    omp_set_num_threads(1); // Request as many threads as processors
+    omp_set_num_threads(omp_get_num_procs()); // Request as many threads as processors
     printf("num_proc=%d \n",omp_get_num_procs());
 
     #pragma omp parallel
@@ -90,5 +94,5 @@ void main(){
    double time = (omp_get_wtime() - start); //s
    printf("Time omp =%E s \n",time);  
    // NPOINTS_PER_DIMENSION=1000: ~1.17 s
-   // NPOINTS_PER_DIMENSION=5000: ~29.98 s
+   // NPOINTS_PER_DIMENSION=5000: ~9 s
 }
