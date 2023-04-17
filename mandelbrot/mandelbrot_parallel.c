@@ -90,5 +90,5 @@ void main(){
    double time = (omp_get_wtime() - start); //s
    printf("Time omp =%E s \n",time);  
    // NPOINTS_PER_DIMENSION=1000: ~1.17 s
-   // NPOINTS_PER_DIMENSION=5000: ~32.7 s
+   // NPOINTS_PER_DIMENSION=5000: ~29.98 s
 }
