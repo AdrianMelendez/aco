@@ -50,7 +50,7 @@ void main(){
 
     double *c_real, *c_img;
     int *not_diverged;
-    int NMAXITERATIONS=100, NPOINTS_PER_DIMENSION=1000;
+    int NMAXITERATIONS=100, NPOINTS_PER_DIMENSION=5000;
 
     double c_real_min=-2., c_real_max=0.5; // limits given by the exercise
     double c_img_min=-1.1, c_img_max=1.1;
@@ -79,5 +79,6 @@ void main(){
 
    double time = (omp_get_wtime() - start); //s
    printf("Time omp =%E s \n",time); 
-   // ~1.17 s
+   // NPOINTS_PER_DIMENSION=1000: ~1.17 s
+   // NPOINTS_PER_DIMENSION=5000: ~32.7 s
 }
