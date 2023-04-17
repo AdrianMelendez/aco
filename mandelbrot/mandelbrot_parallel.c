@@ -41,7 +41,7 @@ void output_file(double c_real[], double c_img[], int not_diverged[], int NPOINT
     fprintf(out_file, "c_real,c_img,divergence\n");
 
     double start_output = omp_get_wtime();
-    #pragma omp for
+    // cannot be parallelised to assure the data is propperly written
     for (int i=0; i<NPOINTS_PER_DIMENSION; i++){
         for (int j=0; j<NPOINTS_PER_DIMENSION; j++){
             fprintf(out_file, "%.6f,%.6f,%d\n",c_real[i],c_img[j],not_diverged[j+i*NPOINTS_PER_DIMENSION]);
@@ -76,23 +76,26 @@ void main(){
     #pragma omp parallel
     {
     
-    #pragma omp for // faster parallelising the outer loop
+    
     for (int i=0; i<NPOINTS_PER_DIMENSION; i++){
         c_real[i] = c_real_min + step_real * i;
 
-        
+        #pragma omp for // faster parallelising the innerloop
         for (int j=0; j<NPOINTS_PER_DIMENSION; j++){
             c_img[j] = c_img_min + step_img * j;
             not_diverged[j+i*NPOINTS_PER_DIMENSION] = check_divergence(c_real[i], c_img[j], NMAXITERATIONS);
             // printf("%d\n", check_divergence(c_real[i], c_img[j], NMAXITERATIONS));
         }
     }
-
-   output_file(c_real, c_img, not_diverged, NPOINTS_PER_DIMENSION);
     }
+   output_file(c_real, c_img, not_diverged, NPOINTS_PER_DIMENSION);
+    
 
    double time = (omp_get_wtime() - start); //s
    printf("Time omp =%E s \n",time);  
+   
    // NPOINTS_PER_DIMENSION=1000: ~1.17 s
-   // NPOINTS_PER_DIMENSION=5000: ~9 s
+   // NPOINTS_PER_DIMENSION=5000: 
+   // -1 thread: ~32 s
+   // -6 threads: ~ 26 s 
 }
