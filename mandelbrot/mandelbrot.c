@@ -1,7 +1,7 @@
-// gcc -o p mandelbrot.c -lm 
+// gcc -o p mandelbrot.c -lm -fopenmp
 #include <stdio.h>
 #include <math.h>
-// #include <omp.h>
+#include <omp.h>
 #include <time.h>
 #include <stdlib.h>
 
@@ -63,6 +63,8 @@ void main(){
     c_img = calloc(NPOINTS_PER_DIMENSION, sizeof(double));
     not_diverged = calloc(NPOINTS_PER_DIMENSION*NPOINTS_PER_DIMENSION, sizeof(int));
 
+    double start = omp_get_wtime();
+
     for (int i=0; i<NPOINTS_PER_DIMENSION; i++){
         c_real[i] = c_real_min + step_real * i;
 
@@ -74,4 +76,8 @@ void main(){
     }
 
    output_file(c_real, c_img, not_diverged, NPOINTS_PER_DIMENSION);
+
+   double time = (omp_get_wtime() - start); //s
+   printf("Time omp =%E s \n",time); 
+   // ~1.17 s
 }
