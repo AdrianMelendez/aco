@@ -54,7 +54,7 @@ double *rk4_step(double t,double y[], double dt, double *(*f)(double t, double y
 }
 
 int main(){
-    int N_steps = 58;
+    int N_steps = 48;
 
     double t_0=0, t_f=365*5*24*3600, dt;
     dt = (t_f - t_0)/N_steps; // uniform time steps

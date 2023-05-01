@@ -1,37 +1,78 @@
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
 
-#define G 1
+#define G 6.67E-11
+#define M 1.989E30
 
-double func(double M, double x, double y){
-    double r = sqrt(x*x + y*y);
-    return -G*M/pow(r,3);
+double funcx(double y[]){
+    // y[0] -> x
+    // y[1] -> y
+    // y[2] -> v_x
+    // y[3] -> v_y
+    double r = sqrt(y[0]*y[0] + y[1]*y[1]);
+    return -G*M/pow(r,3)*y[0]; 
 }
 
-double leapfrog(double x0,double y0,double v_x0, double v_y0, double M){
-    int N_steps = 1000;
+double funcy(double y[]){
+    // y[0] -> x
+    // y[1] -> y
+    // y[2] -> v_x
+    // y[3] -> v_y
+    double r = sqrt(y[0]*y[0] + y[1]*y[1]);
+    return -G*M/pow(r,3)*y[1];
+}
 
-    double t_0=0, t_f=300, dt;
-    dt = (t_f - t_0)/N_steps;
 
-    double *x, *y, *v_x, *v_y;
+double *leapfrog_step(double t,double y[], double dt){
+    static double yres[4];
+    double vx_adv, vy_adv;
+    vx_adv = y[2] + funcx(y)*dt/2.0;
+    yres[0] = y[0] + vx_adv*dt;
+    vy_adv = y[3] + funcy(y)*dt/2.0;
+    yres[1] = y[1] + vy_adv*dt;
+    double y2[4]={yres[0],yres[1],y[2],y[3]};
+    yres[2] = vx_adv + funcx(y2)*dt/2.0;
+    yres[3] = vy_adv + funcy(y2)*dt/2.0;
+    
+    return yres;
+}
 
-    x = calloc(N_steps, sizeof(double)); //allocate doubles
-    y = calloc(N_steps, sizeof(double));
-    v_x = calloc(N_steps, sizeof(double)); 
-    v_y = calloc(N_steps, sizeof(double)); 
+int main(){
+    int N_steps = 48;
+
+    double t_0=0, t_f=365*5*24*3600, dt;
+    dt = (t_f - t_0)/N_steps; // uniform time steps
+
+    double y[4]={1.5e11,0,0,30e3};
+    double t=t_0;
 
     // initial conditions
-    x[0] = x0;
-    y[0] = y0;
-    v_x[0] = v_x0;
+    // printf("Enter initial conditions\n");
+    // printf("x0 = ");
+    // scanf("%lf", &y[0]);
+    // printf("y0 = ");
+    // scanf("%lf", &y[1]);
+    // printf("vx0 = ");
+    // scanf("%lf", &y[2]);
+    // printf("vy0 = ");
+    // scanf("%lf", &y[3]);
 
-    // advance velocity
-    v_x[0] = v_x0 + dt/2*func(M,x0,y0)*x0; //velocity arrays shifted dt/2 to position arrays
-    v_y[0] = v_x0 + dt/2*func(M,x0,y0)*y0;
+    // double *yprima = f(t, y);
+    // printf("%lf", *(yprima+1));
 
-    for (int i=0; i<N_steps;i++){
-
+    FILE *out_file = fopen("leapfrog.dat", "w");
+    for (int i=0; i<N_steps+1;i++){
+        // fprintf(stderr, "x=%lf, y=%lf, vx=%lf, vy=%lf\n", y[0],y[1],y[2],y[3]);
+        fprintf(out_file, "%lf,%lf,%lf\n", y[0],y[1],t);
+        double *yres = leapfrog_step(t, y,dt);
+        y[0] = *(yres);
+        y[1] = *(yres+1);
+        y[2] = *(yres+2);
+        y[3] = *(yres+3);
+        t = t + dt;
     }
 
+
+    return 0;
 }
