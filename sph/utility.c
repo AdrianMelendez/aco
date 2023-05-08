@@ -946,34 +946,34 @@ void indexx(long n, double arr[], long indx[])
  *
  * \return  Returns nothing.
  */
-void find_max_spline(double *x, double *y, int num, int smooth, double *maxx, double *maxy, int steps)
-{
-  double *y2, xi, yi, incr;
+// void find_max_spline(double *x, double *y, int num, int smooth, double *maxx, double *maxy, int steps)
+// {
+//   double *y2, xi, yi, incr;
   
-  /* Smooth the data */
-  smooth3(y, num, smooth);
+//   /* Smooth the data */
+//   smooth3(y, num, smooth);
   
-  /* obtain second derivatives to be used with splint(), i.e. "spline interpolation" */
-  y2 = (double *) calloc(num, sizeof(double));
-  spline(x-1, y-1, num, 2E33, 2E33, y2-1);
+//   /* obtain second derivatives to be used with splint(), i.e. "spline interpolation" */
+//   y2 = (double *) calloc(num, sizeof(double));
+//   spline(x-1, y-1, num, 2E33, 2E33, y2-1);
   
-  /* scan the spline interpolation using splint() */
-  *maxy = -1e10;
-  incr = (x[num-1] - x[0])/(double)(steps-1);
-  xi = x[0];
-  while (xi <= x[num-1]) {
-    splint(x-1, y-1, y2-1, num, xi, &yi);
-    if (yi > *maxy) {
-      *maxx = xi;
-      *maxy = yi;
-    }
-    xi += incr;
-  }
+//   /* scan the spline interpolation using splint() */
+//   *maxy = -1e10;
+//   incr = (x[num-1] - x[0])/(double)(steps-1);
+//   xi = x[0];
+//   while (xi <= x[num-1]) {
+//     splint(x-1, y-1, y2-1, num, xi, &yi);
+//     if (yi > *maxy) {
+//       *maxx = xi;
+//       *maxy = yi;
+//     }
+//     xi += incr;
+//   }
   
-  free(y2);
+//   free(y2);
   
-  return;
-}
+//   return;
+// }
 
 /*==============================================================================
  * smooth data array

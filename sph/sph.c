@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
+#include <stdlib.h>
 // #include <omp.h>
 
 #include "utility.h"
@@ -36,16 +38,16 @@ struct particle{
 };
 
 //*****************************************************************
-//                          KERNEL
+//                     GET SPH COEFFICIENT
 //*****************************************************************
 double W(double r, double h){
     double ratio = r/h;
     if (ratio>=0.0 && ratio<=1.0){
-        return 2.0/3.0 * h * (1.0 - 1.5 * pow2(ratio) + 0.75 * pow3(ratio));
+        return 2.0/(3.0 * h) * (1.0 - 1.5 * pow2(ratio) + 0.75 * pow3(ratio));
     }
     else{
         if (ratio>=1.0 && ratio<=2.0){
-            return 2.0/3.0 * h * (0.25 * pow3(2-ratio));
+            return 2.0/(3.0 * h) * (0.25 * pow3(2-ratio));
         }
         else{
             return 0.0;
@@ -53,9 +55,45 @@ double W(double r, double h){
     }
 }
 
-// double W_coeff(int i, int j, struct particle particle_k){
-//     return W()
-// }
+double dW_ij(int i, int j, struct particle particles[]){
+    double r = particles[i].x - particles[j].x;
+    double abs_factor;
+    if (r>0) {abs_factor=1.;}
+    if (r<0) {r=-r; abs_factor=-1;}
+    double h = particles[i].h;
+    double ratio = r/h;
+    if (ratio>=0.0 && ratio<=1.0){
+        return abs_factor * 2.0 / h * ( - r / (pow2(h)) + 3.0/4.0 * pow2(r)/(pow3(h)));
+    }
+    else{
+        if (ratio>=1.0 && ratio<=2.0){
+            return abs_factor * -0.5 / (pow2(h)) * (pow2(2-ratio));
+        }
+        else{
+            return 0.0;
+        }
+    }
+}
+
+double P_i(int i, struct particle particles[]){
+    return (GAMMA-1) * particles[i].rho * particles[i].e;
+}
+
+void getSPHcoefficients(struct particle particles[]){
+    for (int i=0; i<NPART;i++){
+        double sum_v=0., sum_rho=0., sum_e=0.;
+        for (int j=0; j>NPART;j++){
+            if (j==i) continue;
+            sum_v = sum_v + m * (P_i(j, particles)/pow2(particles[j].rho) + P_i(i, particles)/pow2(particles[i].rho)) * dW_ij(i,j,particles);
+            sum_rho = sum_rho + m * (particles[i].v - particles[j].v) * dW_ij(i,j,particles);
+            sum_e = sum_e + m * (P_i(j, particles)/pow2(particles[j].rho) + P_i(i, particles)/pow2(particles[i].rho)) * (particles[i].v - particles[j].v) * dW_ij(i,j,particles);
+        }
+        particles[i].v_coeff = -sum_v;
+        particles[i].rho_coeff = sum_rho;
+        particles[i].e_coeff = 0.5 * sum_e;
+    }
+}
+
 
 //*****************************************************************
 //                      INITIAL CONDITIONS
@@ -106,8 +144,22 @@ void set_h(struct particle particles[]){
         double distances[NPART];
         double position_i = particles[i].x;
         for (int j=0; j<NPART;j++){
-            distances[j] = abs(position_i - particles[j].x);
+            distances[j] = fabs(position_i - particles[j].x);
         }
+        long sorted_index[NPART]={0};
+        fprintf(stderr,"Array of distances:\n");
+        indexx(NPART, distances, sorted_index);
+        for (int j=0; j<NPART;j++){
+        fprintf(stderr,"%lf,", distances[j]);
+        }
+        fprintf(stderr, "----\n\n");
+        fprintf(stderr,"Array of sorted indexes:\n");
+        for (int j=0; j<NPART;j++){
+        fprintf(stderr,"%ld,", sorted_index[j]);
+        }
+        fprintf(stderr, "\n");
+        particles[i].h = distances[sorted_index[NSPH]-1]; // notice the closest is the same particle
+        break;
     }
 }
 
@@ -120,15 +172,16 @@ void main(){
     initial_conditions(particles);
 
     for (int i=0; i<NSTEPS; i++){
-        // set_h(particles);
-        // getSPHcoefficient();
+        set_h(particles);
+        getSPHcoefficients(particles);
         double dt = Tend/NSTEPS;
         performIntegration(particles, dt);
 
-        if ((i+1)%100==0) WriteOutputFile(particles, t);
+        if ((i+1)%NOUT==0) WriteOutputFile(particles, t);
+        t = t + dt;
     }
 
-    for (int i=0; i<NPART;i++){
-        fprintf(stderr,"%d: e=%lf\n", i, particles[i].e);
-    }
+    // for (int i=0; i<NPART;i++){
+    //     fprintf(stderr,"%d: e=%lf\n", i, particles[i].e);
+    // }
 }
