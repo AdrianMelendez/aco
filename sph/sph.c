@@ -1,3 +1,4 @@
+// gcc -o p utility.c sph.c -lm
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -9,9 +10,9 @@
 //*****************************************************************
 //                          PARAMETERS
 //*****************************************************************
-#define NPART   101 //2001    // number of SPH particles
+#define NPART   2001    // number of SPH particles
 #define NSTEPS  500     // number of integration steps
-#define NSPH    5 //25      // number of SPH neighbours (smaller tha NPART)
+#define NSPH    25      // number of SPH neighbours (smaller tha NPART)
 #define NOUT    100     // every NOUT step an output will be written
 
 #define Tend    0.05    // integration end time
@@ -62,6 +63,7 @@ double dW_ij(int i, int j, struct particle particles[]){
     if (r<0) {r=-r; abs_factor=-1;}
     double h = particles[i].h;
     double ratio = r/h;
+    // fprintf(stderr,"%lf\n", ratio);
     if (ratio>=0.0 && ratio<=1.0){
         return abs_factor * 2.0 / h * ( - r / (pow2(h)) + 3.0/4.0 * pow2(r)/(pow3(h)));
     }
@@ -82,15 +84,17 @@ double P_i(int i, struct particle particles[]){
 void getSPHcoefficients(struct particle particles[]){
     for (int i=0; i<NPART;i++){
         double sum_v=0., sum_rho=0., sum_e=0.;
-        for (int j=0; j>NPART;j++){
+        for (int j=0; j<NPART;j++){
             if (j==i) continue;
             sum_v = sum_v + m * (P_i(j, particles)/pow2(particles[j].rho) + P_i(i, particles)/pow2(particles[i].rho)) * dW_ij(i,j,particles);
             sum_rho = sum_rho + m * (particles[i].v - particles[j].v) * dW_ij(i,j,particles);
             sum_e = sum_e + m * (P_i(j, particles)/pow2(particles[j].rho) + P_i(i, particles)/pow2(particles[i].rho)) * (particles[i].v - particles[j].v) * dW_ij(i,j,particles);
+            // fprintf(stderr,"%lf, %lf, %lf\n", P_i(j, particles), dW_ij(i,j,particles),P_i(i, particles));
         }
         particles[i].v_coeff = -sum_v;
         particles[i].rho_coeff = sum_rho;
         particles[i].e_coeff = 0.5 * sum_e;
+        // fprintf(stderr,"%lf, %lf, %lf\n", particles[i].v_coeff, particles[i].rho_coeff ,particles[i].e_coeff );
     }
 }
 
@@ -147,19 +151,22 @@ void set_h(struct particle particles[]){
             distances[j] = fabs(position_i - particles[j].x);
         }
         long sorted_index[NPART]={0};
-        fprintf(stderr,"Array of distances:\n");
-        indexx(NPART, distances, sorted_index);
-        for (int j=0; j<NPART;j++){
-        fprintf(stderr,"%lf,", distances[j]);
-        }
-        fprintf(stderr, "----\n\n");
-        fprintf(stderr,"Array of sorted indexes:\n");
-        for (int j=0; j<NPART;j++){
-        fprintf(stderr,"%ld,", sorted_index[j]);
-        }
-        fprintf(stderr, "\n");
+
+        double * dist_ptr = &distances[0];
+        long * sorted_ptr = &sorted_index[0];
+        
+        indexx(NPART, dist_ptr-1, sorted_ptr-1);
+        // fprintf(stderr,"Array of distances:\n");
+        // for (int j=0; j<NPART;j++){
+        // fprintf(stderr,"%lf,", distances[j]);
+        // }
+        // fprintf(stderr, "----\n\n");
+        // fprintf(stderr,"Array of sorted indexes:\n");
+        // for (int j=0; j<NPART;j++){
+        // fprintf(stderr,"%ld,", sorted_index[j]);
+        // }
+        // fprintf(stderr, "\n");
         particles[i].h = distances[sorted_index[NSPH]-1]; // notice the closest is the same particle
-        break;
     }
 }
 
@@ -168,13 +175,18 @@ void set_h(struct particle particles[]){
 //*****************************************************************
 void main(){
     double t=0.;
+    double dt = Tend/NSTEPS;
     struct particle particles[NPART];
     initial_conditions(particles);
+    WriteOutputFile(particles, t);
 
     for (int i=0; i<NSTEPS; i++){
         set_h(particles);
+        // for (int j=0; j<NPART;j++){
+        // fprintf(stderr,"%lf\n", particles[j].h);
+        // }
         getSPHcoefficients(particles);
-        double dt = Tend/NSTEPS;
+        
         performIntegration(particles, dt);
 
         if ((i+1)%NOUT==0) WriteOutputFile(particles, t);
