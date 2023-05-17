@@ -1,16 +1,16 @@
-// gcc -o p utility.c sph.c -lm
+// gcc -o p utility.c sph.c -lm -fopenmp
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-// #include <omp.h>
+#include <omp.h>
 
 #include "utility.h"
 
 //*****************************************************************
 //                          PARAMETERS
 //*****************************************************************
-#define NPART   2001    // number of SPH particles
+#define NPART   2001    // number of SPH particles (must be odd)
 #define NSTEPS  500     // number of integration steps
 #define NSPH    25      // number of SPH neighbours (smaller tha NPART)
 #define NOUT    100     // every NOUT step an output will be written
@@ -82,6 +82,9 @@ double P_i(int i, struct particle particles[]){
 }
 
 void getSPHcoefficients(struct particle particles[]){
+    #pragma omp parallel
+    {
+    #pragma omp for
     for (int i=0; i<NPART;i++){
         double sum_v=0., sum_rho=0., sum_e=0.;
         for (int j=0; j<NPART;j++){
@@ -96,6 +99,7 @@ void getSPHcoefficients(struct particle particles[]){
         particles[i].e_coeff = 0.5 * sum_e;
         // fprintf(stderr,"%lf, %lf, %lf\n", particles[i].v_coeff, particles[i].rho_coeff ,particles[i].e_coeff );
     }
+    }
 }
 
 
@@ -104,6 +108,9 @@ void getSPHcoefficients(struct particle particles[]){
 //*****************************************************************
 void initial_conditions(struct particle particles[]){
     double dx = 1./(NPART-1);
+    #pragma omp parallel
+    {
+    #pragma omp for
     for (int i=0; i<NPART;i++){
         particles[i].x = dx*i;
         particles[i].v = 0.;
@@ -111,17 +118,22 @@ void initial_conditions(struct particle particles[]){
         particles[i].rho = 1/dx;
         if (i==(NPART-1)/2) particles[i].e=1;
     }
+    }
 }
 
 //*****************************************************************
 //                      PERFORM INTEGRATION
 //*****************************************************************
 void performIntegration(struct particle particles[], double dt){
+    #pragma omp parallel
+    {
+    #pragma omp for
     for (int i=0; i<NPART;i++){
         particles[i].x      = particles[i].x    + particles[i].v*dt;
         particles[i].v      = particles[i].v    + particles[i].v_coeff*dt;
         particles[i].rho    = particles[i].rho  + particles[i].rho_coeff*dt;
         particles[i].e      = particles[i].e    + particles[i].e_coeff*dt;
+    }
     }
 }
 
@@ -129,7 +141,7 @@ void performIntegration(struct particle particles[], double dt){
 //                       OUTPUT FILE
 //*****************************************************************
 void WriteOutputFile(struct particle particles[], double t){
-    char filename[] = "time=";
+    char filename[] = "time_par=";
     char str[100];
     sprintf(str,"%.3f.dat", t);
     strcat(filename,str);
@@ -144,10 +156,15 @@ void WriteOutputFile(struct particle particles[], double t){
 //                         SET H
 //*****************************************************************
 void set_h(struct particle particles[]){
+    #pragma omp parallel
+    {
+    #pragma omp for
     for (int i=0; i<NPART;i++){
+        // fprintf(stderr,"%d---%d\n",i, omp_get_thread_num());
         double distances[NPART];
         double position_i = particles[i].x;
         for (int j=0; j<NPART;j++){
+            // fprintf(stderr,"%d---%d\n",j, omp_get_thread_num());
             distances[j] = fabs(position_i - particles[j].x);
         }
         long sorted_index[NPART]={0};
@@ -168,22 +185,26 @@ void set_h(struct particle particles[]){
         // fprintf(stderr, "\n");
         particles[i].h = distances[sorted_index[NSPH]-1]; // notice the closest is the same particle
     }
+    }
 }
 
 //*****************************************************************
 //                          MAIN
 //*****************************************************************
 void main(){
+    omp_set_num_threads(omp_get_num_procs()); // Request as many threads as processors
+    double begin = omp_get_wtime();
     double t=0.;
     double dt = Tend/NSTEPS;
     struct particle particles[NPART];
+
     initial_conditions(particles);
     WriteOutputFile(particles, t);
 
     for (int i=0; i<NSTEPS; i++){
         set_h(particles);
         // for (int j=0; j<NPART;j++){
-        // fprintf(stderr,"%lf\n", particles[j].h);
+        // fprintf(stderr,"%lf-%d\n", particles[i].h, omp_get_thread_num());
         // }
         getSPHcoefficients(particles);
         
@@ -192,8 +213,11 @@ void main(){
         if ((i+1)%NOUT==0) WriteOutputFile(particles, t);
         t = t + dt;
     }
+    double time = 1000.*(omp_get_wtime() - begin);
+    fprintf(stderr,"Time = %lf ms \n",time);
 
-    // for (int i=0; i<NPART;i++){
-    //     fprintf(stderr,"%d: e=%lf\n", i, particles[i].e);
-    // }
+    //RESULTS
+
+    // Time 1 THREAD  = 593.535862759 s ~ 9.89 min
+    // TIME 4 THREADS = 398.455250247 s ~ 6.64 min
 }
